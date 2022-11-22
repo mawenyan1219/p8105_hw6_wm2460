@@ -6,6 +6,83 @@ output: github_document
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
+library(tidyverse)
+
+
+knitr::opts_chunk$set(
+	echo = TRUE,
+	warning = FALSE,
+	fig.width = 8, 
+  fig.height = 6,
+  out.width = "90%"
+)
+theme_set(theme_minimal() + theme(legend.position = "bottom"))
+options(
+  ggplot2.continuous.colour = "viridis",
+  ggplot2.continuous.fill = "viridis"
+)
+scale_colour_discrete = scale_colour_viridis_d
+scale_fill_discrete = scale_fill_viridis_d
+```
+
+
+## Problem 1
+```{r message=FALSE}
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2017-01-01",
+    date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) %>%
+  select(name, id, everything())
+```
+
+
+## Problem 2
+
+### Tidying the dataset
+```{r message=FALSE}
+homicides_df = read_csv("./data/homicide-data.csv")
+
+homicides_new = homicides_df %>% 
+  janitor::clean_names() %>% 
+  mutate(city_state = str_c(city, state, sep = "_")) %>% 
+  filter(!city_state %in% c("Dallas_TX", "Phoenix_AZ", "Kansas City_MO", "Tulsa_AL"), 
+         victim_race %in% c("Black", "White")) %>% 
+  mutate(victim_age = as.numeric(victim_age),
+         resolved = as.numeric(disposition == "Closed by arrest"),
+         victim_race = fct_relevel(victim_race, "White"),
+         victim_sex = fct_relevel(victim_sex, "Male"))
 
 ```
+
+### `glm` for Baltimore
+
+Fit a logistic regression with resolved vs unresolved as the outcome and victim age, sex and race as predictors
+```{r}
+baltimore_glm = homicides_new %>% 
+  filter(city_state == "Baltimore_MD") %>% 
+  glm(resolved ~ victim_age + victim_sex + victim_race, data = ., family = binomial()) %>% 
+  broom::tidy()
+
+baltimore_glm
+
+# save the output of glm as an R object
+baltimore_glm = homicides_new %>% 
+  filter(city_state == "Baltimore_MD") %>% 
+  glm(resolved ~ victim_age + victim_sex + victim_race, data = ., family = binomial()) %>% 
+  broom::tidy() %>% 
+  saveRDS(., "./data/Baltimore_glm.rds")
+```
+
+### `glm` for all cities
+```{r}
+
+```
+
+
 
