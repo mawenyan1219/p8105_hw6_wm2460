@@ -7,7 +7,8 @@ output: github_document
 knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
-
+library(modelr)
+library(patchwork)
 
 knitr::opts_chunk$set(
 	echo = TRUE,
@@ -56,14 +57,13 @@ homicides_new = homicides_df %>%
   mutate(victim_age = as.numeric(victim_age),
          resolved = as.numeric(disposition == "Closed by arrest"),
          victim_race = fct_relevel(victim_race, "White"),
-         victim_sex = fct_relevel(victim_sex, "Male"))
+         victim_sex = fct_relevel(victim_sex, "Female"))
 
 ```
 
 ### `glm` for Baltimore
 
-Fit a logistic regression with resolved vs unresolved as the outcome and victim age, sex and race as predictors
-```{r}
+```{r glm_baltimore}
 baltimore_glm = homicides_new %>% 
   filter(city_state == "Baltimore_MD") %>% 
   glm(resolved ~ victim_age + victim_sex + victim_race, data = ., family = binomial()) %>% 
@@ -75,14 +75,72 @@ baltimore_glm
 baltimore_glm = homicides_new %>% 
   filter(city_state == "Baltimore_MD") %>% 
   glm(resolved ~ victim_age + victim_sex + victim_race, data = ., family = binomial()) %>% 
-  broom::tidy() %>% 
   saveRDS(., "./data/Baltimore_glm.rds")
 ```
 
-### `glm` for all cities
-```{r}
+### Odds ratio for Baltimore
+
+```{r or_baltimore}
+#cannot knit this code chunk
+#baltimore_glm %>% 
+#  mutate(OR = exp(estimate)) %>%
+#  select(term, log_OR = estimate, OR, p.value) %>% 
+#  knitr::kable(digits = 3)
 
 ```
 
+### `glm` for all cities
+```{r glm_all}
+#Draft code
+#all_glm = homicides_new %>% 
+#  nest(all_cities = c(resolved, victim_age, victim_sex, victim_race)) %>%
+#  select(city_state, all_cities) %>% 
+#  group_by(city_state) %>% 
+#  mutate(models = map(.x = all_cities, ~glm(resolved ~ victim_age + victim_sex + victim_race, data = ., family = binomial())),
+#         results = map(models, broom::tidy))#
+```
 
+
+## Problem 3
+
+### Load and clearn
+```{r p3_load}
+bw_df = read_csv("./data/birthweight.csv")
+
+bw_new = bw_df %>% 
+  mutate(babysex = as.factor(babysex),
+         frace = as.factor(frace),
+         malform = as.factor(malform),
+         mrace = as.factor(mrace)) %>% 
+  drop_na()
+```
+
+### Model 1
+```{r m1}
+m1 = lm(bwt ~ wtgain, data = bw_new)
+
+m1_df = bw_new %>% 
+  select(bwt, wtgain) %>% 
+  modelr::add_residuals(m1) %>% 
+  modelr::add_predictions(m1)
+
+m1_df %>% 
+  ggplot(aes(x = wtgain, y = resid)) + geom_violin()
+```
+
+I picked the variable `wtgain` as the predictor for model 1 and I picked it based on a hypothesized structure for the factors that underly birthweight. 
+
+The residual plot shows that the residual of `wtgain` is normally distributed following the central limit theorem. 
+
+## Model 2 & 3
+```{r m2}
+m2 = lm(bwt ~ blength + gaweeks, data = bw_new)
+
+m3 = lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*blength*babysex, data = bw_new)
+```
+
+## Crossvalidation
+```{r cv}
+
+```
 
