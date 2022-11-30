@@ -111,9 +111,13 @@ bw_new = bw_df %>%
   mutate(babysex = as.factor(babysex),
          frace = as.factor(frace),
          malform = as.factor(malform),
-         mrace = as.factor(mrace)) %>% 
-  drop_na()
+         mrace = as.factor(mrace)) 
+
+sum(is.na(bw_new))
 ```
+
+Cleaned the dataset and there is no missing data since `sum(is.na(bw_new))` returns 0.
+
 
 ### Model 1
 ```{r m1}
@@ -130,10 +134,11 @@ m1_df %>%
 
 I picked the variable `wtgain` as the predictor for model 1 and I picked it based on a hypothesized structure for the factors that underly birthweight. 
 
-The residual plot shows that the residual of `wtgain` is normally distributed following the central limit theorem. 
+The residual plot shows that the residual of `wtgain` is approximately normally distributed following the central limit theorem. 
+
 
 ## Model 2 & 3
-```{r m2}
+```{r m2&3}
 m2 = lm(bwt ~ blength + gaweeks, data = bw_new)
 
 m3 = lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*blength*babysex, data = bw_new)
@@ -141,6 +146,26 @@ m3 = lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blengt
 
 ## Crossvalidation
 ```{r cv}
+bw_cv = crossv_mc(bw_new, 100) %>% 
+  mutate(train = map(train, as_tibble),
+         test = map(test, as_tibble)) %>% 
+  mutate(m1_cv = map(train, ~lm(bwt ~ wtgain, data = .x)),
+         m2_cv = map(train, ~lm(bwt ~ blength + gaweeks, data = .x)),
+         m3_cv = map(train, ~lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*blength*babysex, data = .x))) %>% 
+  mutate(rmse_m1 = map2_dbl(m1_cv, test, ~rmse(model = .x, data = .y)),
+         rmse_m2 = map2_dbl(m2_cv, test, ~rmse(model = .x, data = .y)), 
+         rmse_m3 = map2_dbl(m3_cv, test, ~rmse(model = .x, data = .y)))
 
+bw_cv_plot = bw_cv %>% 
+  select(starts_with("rmse")) %>% 
+  pivot_longer(everything(), 
+               names_to = "model",
+               values_to = "rmse",
+               names_prefix = "rmse_") %>% 
+  ggplot(aes(x = model, y = rmse)) + geom_violin()
+
+bw_cv_plot
 ```
+
+From the violin plot, we can see that model 1 has the highest RMSE and model 3 has the lowest RMSE. Since it is preferable to select the model with the smallest RMSE, model 3 is better comparing to the other two models. 
 
