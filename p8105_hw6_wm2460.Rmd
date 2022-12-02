@@ -10,6 +10,8 @@ library(tidyverse)
 library(modelr)
 library(patchwork)
 
+set.seed(6)
+
 knitr::opts_chunk$set(
 	echo = TRUE,
 	warning = FALSE,
@@ -62,7 +64,6 @@ homicides_new = homicides_df %>%
 ```
 
 ### `glm` for Baltimore
-
 ```{r glm_baltimore}
 baltimore_glm = homicides_new %>% 
   filter(city_state == "Baltimore_MD") %>% 
@@ -70,35 +71,52 @@ baltimore_glm = homicides_new %>%
   broom::tidy()
 
 baltimore_glm
-
-# save the output of glm as an R object
-baltimore_glm = homicides_new %>% 
-  filter(city_state == "Baltimore_MD") %>% 
-  glm(resolved ~ victim_age + victim_sex + victim_race, data = ., family = binomial()) %>% 
-  saveRDS(., "./data/Baltimore_glm.rds")
 ```
 
-### Odds ratio for Baltimore
-
+### Adjusted odds ratio for Baltimore
 ```{r or_baltimore}
-#cannot knit this code chunk
-#baltimore_glm %>% 
-#  mutate(OR = exp(estimate)) %>%
-#  select(term, log_OR = estimate, OR, p.value) %>% 
-#  knitr::kable(digits = 3)
-
+baltimore_glm %>% 
+  mutate(OR = exp(estimate),
+         CI_upper = exp(estimate + 1.96 * std.error),
+         CI_lower = exp(estimate - 1.96 * std.error)) %>%
+  filter(term == "victim_sexMale") %>%
+  select(term, OR, CI_upper, CI_lower) %>% 
+  knitr::kable(digits = 3)
 ```
 
-### `glm` for all cities
+### `glm` and adjusted odds ratio for all cities
 ```{r glm_all}
-#Draft code
-#all_glm = homicides_new %>% 
-#  nest(all_cities = c(resolved, victim_age, victim_sex, victim_race)) %>%
-#  select(city_state, all_cities) %>% 
-#  group_by(city_state) %>% 
-#  mutate(models = map(.x = all_cities, ~glm(resolved ~ victim_age + victim_sex + victim_race, data = ., family = binomial())),
-#         results = map(models, broom::tidy))#
+all_glm = homicides_new %>% 
+  nest(all_cities = -city_state) %>%
+  mutate(models = map(.x = all_cities, ~glm(resolved ~ victim_age + victim_sex + victim_race, data = ., family = binomial())),
+         results = map(models, broom::tidy)) %>% 
+  select(-models, -all_cities) %>% 
+  unnest(cols = results) %>% 
+  mutate(OR = exp(estimate),
+         CI_upper = exp(estimate + 1.96 * std.error),
+         CI_lower = exp(estimate - 1.96 * std.error)) %>% 
+  filter(term == "victim_sexMale") %>% 
+  select(city_state, OR, CI_upper, CI_lower)
+
+all_glm %>% 
+  knitr::kable(digits = 3)
 ```
+
+### Plot for adjusted OR and 95% CI
+```{r plot_or}
+or_plot = all_glm %>% 
+  mutate(city_state = fct_reorder(city_state, OR)) %>% 
+  ggplot(aes(x = city_state, y = OR)) +
+  geom_point() +
+  ylim(0, 4) +
+  geom_errorbar(aes(ymin = CI_lower, ymax = CI_upper)) + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+
+or_plot
+```
+
+Comment on the plot:
+Here, we can see that New York has the lowest adjusted odds ratio and Albuquerque has the highest adjusted odds ratio. Since many cities have odds ratio below 1, the odds of having a resolved homicide when the victim is male is usually lower than the odds of having a resolved homicide when the victim was female in many cities, after adjusting for victim age and victim race. The 95% CI of Fresno, Stockton, and Albuquerque is much wider than other cities. 
 
 
 ## Problem 3
@@ -118,7 +136,6 @@ sum(is.na(bw_new))
 
 Cleaned the dataset and there is no missing data since `sum(is.na(bw_new))` returns 0.
 
-
 ### Model 1
 ```{r m1}
 m1 = lm(bwt ~ wtgain, data = bw_new)
@@ -135,7 +152,6 @@ m1_df %>%
 I picked the variable `wtgain` as the predictor for model 1 and I picked it based on a hypothesized structure for the factors that underly birthweight. 
 
 The residual plot shows that the residual of `wtgain` is approximately normally distributed following the central limit theorem. 
-
 
 ## Model 2 & 3
 ```{r m2&3}
@@ -169,3 +185,5 @@ bw_cv_plot
 
 From the violin plot, we can see that model 1 has the highest RMSE and model 3 has the lowest RMSE. Since it is preferable to select the model with the smallest RMSE, model 3 is better comparing to the other two models. 
 
+
+## End of HW6
