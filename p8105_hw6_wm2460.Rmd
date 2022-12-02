@@ -96,14 +96,13 @@ homicides_new = homicides_df %>%
          resolved = as.numeric(disposition == "Closed by arrest"),
          victim_race = fct_relevel(victim_race, "White"),
          victim_sex = fct_relevel(victim_sex, "Female"))
-
 ```
 
 ### `glm` for Baltimore
 ```{r glm_baltimore}
 baltimore_glm = homicides_new %>% 
   filter(city_state == "Baltimore_MD") %>% 
-  glm(resolved ~ victim_age + victim_sex + victim_race, data = ., family = binomial()) %>% 
+  glm(resolved ~ victim_age + victim_sex + victim_race, family = binomial(), data = .) %>% 
   broom::tidy()
 
 baltimore_glm
@@ -111,28 +110,32 @@ baltimore_glm
 
 ### Adjusted odds ratio for Baltimore
 ```{r or_baltimore}
-baltimore_glm %>% 
+baltimore_or = baltimore_glm %>% 
   mutate(OR = exp(estimate),
-         CI_upper = exp(estimate + 1.96 * std.error),
-         CI_lower = exp(estimate - 1.96 * std.error)) %>%
+         CI_lower = exp(estimate - 1.96 * std.error),
+         CI_upper = exp(estimate + 1.96 * std.error))
+
+baltimore_or %>%
   filter(term == "victim_sexMale") %>%
-  select(term, OR, CI_upper, CI_lower) %>% 
+  select(term, OR, CI_lower, CI_upper) %>% 
   knitr::kable(digits = 3)
 ```
+
+For Baltimore, the adjusted odds ratio for solving homicides comparing male victims to female victims keeping all other variables fixed is `r baltimore_or %>% filter(term == "victim_sexMale") %>% pull(OR)` with 95% CI (`r baltimore_or %>% filter(term == "victim_sexMale") %>% pull(CI_lower)`, `r baltimore_or %>% filter(term == "victim_sexMale") %>% pull(CI_upper)`). 
 
 ### `glm` and adjusted odds ratio for all cities
 ```{r glm_all}
 all_glm = homicides_new %>% 
   nest(all_cities = -city_state) %>%
-  mutate(models = map(.x = all_cities, ~glm(resolved ~ victim_age + victim_sex + victim_race, data = ., family = binomial())),
+  mutate(models = map(.x = all_cities, ~glm(resolved ~ victim_age + victim_sex + victim_race, family = binomial(), data = .)),
          results = map(models, broom::tidy)) %>% 
   select(-models, -all_cities) %>% 
   unnest(cols = results) %>% 
   mutate(OR = exp(estimate),
-         CI_upper = exp(estimate + 1.96 * std.error),
-         CI_lower = exp(estimate - 1.96 * std.error)) %>% 
+         CI_lower = exp(estimate - 1.96 * std.error),
+         CI_upper = exp(estimate + 1.96 * std.error)) %>% 
   filter(term == "victim_sexMale") %>% 
-  select(city_state, OR, CI_upper, CI_lower)
+  select(city_state, OR, CI_lower, CI_upper)
 
 all_glm %>% 
   knitr::kable(digits = 3)
@@ -151,8 +154,9 @@ or_plot = all_glm %>%
 or_plot
 ```
 
-Comment on the plot:
-Here, we can see that New York has the lowest adjusted odds ratio and Albuquerque has the highest adjusted odds ratio. Since many cities have odds ratio below 1, the odds of having a resolved homicide when the victim is male is usually lower than the odds of having a resolved homicide when the victim was female in many cities, after adjusting for victim age and victim race. The 95% CI of Fresno, Stockton, and Albuquerque is much wider than other cities. 
+Here, we can see that New York has the lowest adjusted odds ratio and Albuquerque has the highest adjusted odds ratio. Many cities have odds ratio below 1, and this means that the odds of having a resolved homicide when the victim is male is lower than the odds of having a resolved homicide when the victim is female in those cities, adjusting for victim age and victim race. 
+
+On the other hand, several cities, such as Nashville, Fresno, Stockton, and Albuquerque, have odds ratio larger than 1, meaning that the odds of having a resolved homicide when the victim is male is higher than the odds of having a resolved homicide when the victim is female, adjusting for victim age and victim race. Besides, the 95% CI of Fresno, Stockton, and Albuquerque is much wider than other cities. 
 
 
 ## Problem 3
@@ -170,7 +174,7 @@ bw_new = bw_df %>%
 sum(is.na(bw_new))
 ```
 
-Cleaned the dataset and there is no missing data since `sum(is.na(bw_new))` returns 0.
+Cleaned the dataset and there is no missing data since `sum(is.na(bw_new))` returns `r sum(is.na(bw_new))`.
 
 ### Model 1
 ```{r m1}
@@ -185,7 +189,7 @@ m1_df %>%
   ggplot(aes(x = wtgain, y = resid)) + geom_violin()
 ```
 
-I picked the variable `wtgain` as the predictor for model 1 and I picked it based on a hypothesized structure for the factors that underly birthweight. It is possible that mother’s weight gain during pregnancy is closely related to baby's birth weight. If the mother gain more weight, perhaps the baby's birth weight is heavier 
+I picked the variable `wtgain` as the predictor for model 1 and I picked it based on a hypothesized structure for the factors that underly birthweight. It is possible that mother’s weight gain during pregnancy is closely related to baby's birth weight. If the mother gain more weight, perhaps the baby's birth weight is heavier.
 
 The residual plot shows that the residual of `wtgain` is approximately normally distributed and there are not any notable outliers from the residual plot.  
 
@@ -219,7 +223,8 @@ bw_cv_plot = bw_cv %>%
 bw_cv_plot
 ```
 
-From the violin plot, we can see that model 1 has the highest RMSE and model 3 has the lowest RMSE. Since it is preferable to select the model with the smallest RMSE, model 3 is better comparing to the other two models. 
+From the violin plot, we can see that model 1, which is the model I proposed, has the highest RMSE and model 3 has the lowest RMSE. Since it is preferable to select the model with the smallest RMSE, model 3 is better comparing to the other two models. 
+
 
 
 ## End of HW6
