@@ -121,7 +121,7 @@ baltimore_or %>%
   knitr::kable(digits = 3)
 ```
 
-For Baltimore, the adjusted odds ratio for solving homicides comparing male victims to female victims keeping all other variables fixed is `r baltimore_or %>% filter(term == "victim_sexMale") %>% pull(OR)` with 95% CI (`r baltimore_or %>% filter(term == "victim_sexMale") %>% pull(CI_lower)`, `r baltimore_or %>% filter(term == "victim_sexMale") %>% pull(CI_upper)`). 
+For Baltimore, the adjusted odds ratio for solving homicides comparing male victims to female victims keeping all other variables (i.e., victim race and victim age) fixed is `r baltimore_or %>% filter(term == "victim_sexMale") %>% pull(OR)` with 95% CI (`r baltimore_or %>% filter(term == "victim_sexMale") %>% pull(CI_lower)`, `r baltimore_or %>% filter(term == "victim_sexMale") %>% pull(CI_upper)`). 
 
 ### `glm` and adjusted odds ratio for all cities
 ```{r glm_all}
@@ -154,14 +154,14 @@ or_plot = all_glm %>%
 or_plot
 ```
 
-Here, we can see that New York has the lowest adjusted odds ratio and Albuquerque has the highest adjusted odds ratio. Many cities have odds ratio below 1, and this means that the odds of having a resolved homicide when the victim is male is lower than the odds of having a resolved homicide when the victim is female in those cities, adjusting for victim age and victim race. 
+Here, we can see that New York has the lowest adjusted odds ratio and Albuquerque has the highest adjusted odds ratio. Many cities have adjusted odds ratio below 1, and this means that the odds of having a resolved homicide among male victims is lower than the odds of having a resolved homicide among female victims in those cities, adjusting for victim age and victim race. 
 
-On the other hand, several cities, such as Nashville, Fresno, Stockton, and Albuquerque, have odds ratio larger than 1, meaning that the odds of having a resolved homicide when the victim is male is higher than the odds of having a resolved homicide when the victim is female, adjusting for victim age and victim race. Besides, the 95% CI of Fresno, Stockton, and Albuquerque is much wider than other cities. 
+On the other hand, several cities, such as Nashville, Fresno, Stockton, and Albuquerque, have odds ratio larger than 1, meaning that the adjusted odds of having a resolved homicide among male victims is higher than the odds of having a resolved homicide among female victims, adjusting for victim age and victim race. Besides, the 95% CI of Fresno, Stockton, and Albuquerque is much wider than other cities. 
 
 
 ## Problem 3
 
-### Load and clearn
+### Load and clean
 ```{r p3_load}
 bw_df = read_csv("./data/birthweight.csv")
 
@@ -176,9 +176,11 @@ sum(is.na(bw_new))
 
 Cleaned the dataset and there is no missing data since `sum(is.na(bw_new))` returns `r sum(is.na(bw_new))`.
 
-### Model 1
+### Model 1 & residual plot
 ```{r m1}
 m1 = lm(bwt ~ wtgain, data = bw_new)
+
+m1
 
 m1_df = bw_new %>% 
   select(bwt, wtgain) %>% 
@@ -189,7 +191,7 @@ m1_df %>%
   ggplot(aes(x = wtgain, y = resid)) + geom_violin()
 ```
 
-I picked the variable `wtgain` as the predictor for model 1 and I picked it based on a hypothesized structure for the factors that underly birthweight. It is possible that mother’s weight gain during pregnancy is closely related to baby's birth weight. If the mother gain more weight, perhaps the baby's birth weight is heavier.
+I picked the variable `wtgain` as the predictor for model 1 and I picked it based on a hypothesized structure for the factors that underly birthweight. It is possible that mother’s weight gain during pregnancy is closely related to baby's birth weight. If the mother gains more weight, perhaps the baby's birth weight is heavier, suggesting a positive relationship between the two variables.
 
 The residual plot shows that the residual of `wtgain` is approximately normally distributed and there are not any notable outliers from the residual plot.  
 
@@ -197,7 +199,11 @@ The residual plot shows that the residual of `wtgain` is approximately normally 
 ```{r m2&3}
 m2 = lm(bwt ~ blength + gaweeks, data = bw_new)
 
+m2
+
 m3 = lm(bwt ~ bhead + blength + babysex + bhead*blength + bhead*babysex + blength*babysex + bhead*blength*babysex, data = bw_new)
+
+m3
 ```
 
 ## Crossvalidation
