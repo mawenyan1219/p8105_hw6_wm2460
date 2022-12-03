@@ -10,6 +10,8 @@ library(tidyverse)
 library(modelr)
 library(viridis)
 
+set.seed(6)
+
 knitr::opts_chunk$set(
 	echo = TRUE,
 	warning = FALSE,
@@ -193,7 +195,7 @@ m1_df %>%
 
 I picked the variable `wtgain` as the predictor for model 1 and I picked it based on a hypothesized structure for the factors that underly birthweight. It is possible that mother’s weight gain during pregnancy is closely related to baby's birth weight. If the mother gains more weight, perhaps the baby's birth weight is heavier, suggesting a positive relationship between the two variables.
 
-The residual plot shows that the residual of `wtgain` is approximately normally distributed and there are not any notable outliers from the residual plot.  
+The residual plot generated shows mother’s weight gain during pregnancy on x and residual on y. 
 
 ## Model 2 & 3
 ```{r m2&3}
@@ -230,7 +232,5 @@ bw_cv_plot
 ```
 
 From the violin plot, we can see that model 1, which is the model I proposed, has the highest RMSE and model 3 has the lowest RMSE. Since it is preferable to select the model with the smallest RMSE, model 3 is better comparing to the other two models. 
-
-
 
 ## End of HW6
